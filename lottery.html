@@ -1,0 +1,236 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LuckyLoop Lottery</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #6e45e2;
+            text-align: center;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .stat-box {
+            text-align: center;
+        }
+        button {
+            background: #6e45e2;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin: 10px 0;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #payment-form {
+            margin-top: 20px;
+            display: none;
+        }
+        #card-element {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .winner {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            display: none;
+        }
+        .entry {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 LuckyLoop Lottery 🎉</h1>
+        <p>Enter for a chance to win <strong>$100</strong>! A winner is picked every 100 entries.</p>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <h3>Entries</h3>
+                <p id="current-entries">0</p>
+            </div>
+            <div class="stat-box">
+                <h3>Next Draw</h3>
+                <p id="next-draw">100</p>
+            </div>
+            <div class="stat-box">
+                <h3>Last Winner</h3>
+                <p id="last-winner">None yet</p>
+            </div>
+        </div>
+
+        <button id="enter-btn">Enter Lottery ($1.00)</button>
+        
+        <div id="payment-form">
+            <div id="card-element"><!-- Stripe injects here --></div>
+            <button id="submit-btn">Submit Payment</button>
+            <button id="cancel-btn" style="background: #ccc;">Cancel</button>
+        </div>
+
+        <div class="winner" id="winner-box">
+            <h2>🎊 Winner! 🎊</h2>
+            <p id="winner-name"></p>
+            <p>Congratulations! $100 has been awarded.</p>
+        </div>
+
+        <h3>Recent Entries</h3>
+        <div id="entries-list"></div>
+    </div>
+
+    <script>
+        // Configuration
+        const config = {
+            entryPrice: 1.00, // $1 per entry
+            prizeAmount: 100.00, // $100 prize
+            drawEvery: 100 // Draw every 100 entries
+        };
+
+        // State
+        let entries = JSON.parse(localStorage.getItem('lotteryEntries')) || [];
+        let lastWinner = JSON.parse(localStorage.getItem('lastWinner')) || null;
+        
+        // Stripe (test mode - no real payments)
+        const stripe = Stripe('pk_test_51PJ9ZGP3l5Hb6kZ7n7vJ8Yw3Q9ZQ2XqZ3Q2XqZ3Q2XqZ3Q2XqZ3Q2XqZ3');
+        const elements = stripe.elements();
+        const cardElement = elements.create('card');
+        cardElement.mount('#card-element');
+
+        // DOM Elements
+        const enterBtn = document.getElementById('enter-btn');
+        const paymentForm = document.getElementById('payment-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const winnerBox = document.getElementById('winner-box');
+        const winnerName = document.getElementById('winner-name');
+        const currentEntriesEl = document.getElementById('current-entries');
+        const nextDrawEl = document.getElementById('next-draw');
+        const lastWinnerEl = document.getElementById('last-winner');
+        const entriesList = document.getElementById('entries-list');
+
+        // Initialize
+        updateUI();
+
+        // Event Listeners
+        enterBtn.addEventListener('click', () => {
+            paymentForm.style.display = 'block';
+            enterBtn.style.display = 'none';
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            paymentForm.style.display = 'none';
+            enterBtn.style.display = 'block';
+        });
+
+        submitBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
+            // Simulate payment processing (in real app, use Stripe)
+            setTimeout(() => {
+                processEntry();
+                paymentForm.style.display = 'none';
+                enterBtn.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Payment';
+            }, 1500);
+        });
+
+        // Functions
+        function processEntry() {
+            // Create entry
+            const entry = {
+                id: Date.now(),
+                name: `User ${Math.floor(Math.random() * 1000)}`, // Simulated user
+                timestamp: new Date().toLocaleString(),
+                amount: config.entryPrice
+            };
+
+            entries.push(entry);
+            localStorage.setItem('lotteryEntries', JSON.stringify(entries));
+
+            // Check for winner
+            if (entries.length % config.drawEvery === 0) {
+                drawWinner();
+            }
+
+            updateUI();
+        }
+
+        function drawWinner() {
+            const winnerIndex = Math.floor(Math.random() * entries.length);
+            const winner = entries[winnerIndex];
+            lastWinner = winner;
+            localStorage.setItem('lastWinner', JSON.stringify(winner));
+
+            // Show winner
+            winnerName.textContent = `${winner.name} won $${config.prizeAmount}!`;
+            winnerBox.style.display = 'block';
+
+            // Hide after 10 seconds
+            setTimeout(() => {
+                winnerBox.style.display = 'none';
+            }, 10000);
+        }
+
+        function updateUI() {
+            currentEntriesEl.textContent = entries.length;
+            nextDrawEl.textContent = config.drawEvery - (entries.length % config.drawEvery);
+            
+            if (lastWinner) {
+                lastWinnerEl.textContent = lastWinner.name;
+            }
+
+            // Show recent entries
+            entriesList.innerHTML = '';
+            const recentEntries = [...entries].reverse().slice(0, 5);
+            recentEntries.forEach(entry => {
+                const entryEl = document.createElement('div');
+                entryEl.className = 'entry';
+                entryEl.textContent = `${entry.name} - ${entry.timestamp}`;
+                entriesList.appendChild(entryEl);
+            });
+        }
+    </script>
+</body>
+</html>
