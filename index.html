@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LuckyLoop Live</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="container">
+    <h1>🎟️ LuckyLoop Dashboard</h1>
+    <button id="connectWallet">🔌 Connect Wallet</button>
+    <div id="dashboard">
+      <p><strong>Address:</strong> <span id="walletAddress">Not connected</span></p>
+      <p><strong>Balance:</strong> <span id="walletBalance">0 ETH</span></p>
+
+      <h2>💸 Send ETH</h2>
+      <input id="recipientAddress" placeholder="Recipient Address">
+      <input id="sendAmount" type="number" placeholder="Amount in ETH">
+      <button id="sendEthButton">Send</button>
+      <p id="transactionStatus"></p>
+
+      <h2>🎯 Enter Lottery</h2>
+      <button onclick="enterLottery(5)">Enter $5 Lottery</button>
+      <button onclick="enterLottery(50)">Enter $50 Lottery</button>
+      <p id="lotteryStatus"></p>
+
+      <h3>📜 Transaction History</h3>
+      <ul id="transactionList"><li>No transactions yet.</li></ul>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
